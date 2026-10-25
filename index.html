@@ -143,20 +143,22 @@
             display: block;
             margin: 8px 16px;
             padding: 12px;
-            background: linear-gradient(135deg,var(--dorado),#b8860b);
-            color: var(--verde);
-            border: 0;
+            background: linear-gradient(135deg, var(--verde), var(--verde2)) !important;
+            color: var(--dorado) !important;
+            border: 2px solid var(--dorado) !important;
             border-radius: 12px;
             font-weight: 800;
             width: calc(100% - 32px);
-            box-shadow: 0 4px 10px rgba(212, 175, 55, 0.3);
+            box-shadow: 0 4px 10px rgba(6, 46, 34, 0.2);
+            text-align: center;
+            cursor: pointer;
         }
 
         .banner-suscripcion-home {
             margin: 0 16px 8px;
             padding: 12px;
-            background: linear-gradient(135deg, var(--verde2), var(--verde));
-            border: 1px solid var(--dorado);
+            background: linear-gradient(135deg, var(--verde), var(--verde2));
+            border: 2px solid var(--dorado);
             border-radius: 12px;
             text-align: center;
             color: white;
@@ -682,7 +684,7 @@
         .opt-nacion { background: #1e3a8a; }
         .opt-galicia { background: #c2410c; }
 
-        /* Estilo para Marcadores Personalizados en el Mapa por Rubro */
+        /* Estilo para Marcadores Estilizados tipo App móvil */
         .custom-marker {
             background: var(--verde);
             border: 2px solid var(--dorado);
@@ -1076,7 +1078,7 @@
         </div>
     </div>
 
-    <!-- Modal de Inicio de Sesión (Corregido y persistente) -->
+    <!-- Modal de Inicio de Sesión -->
     <div id="modalLogin" class="modal-overlay hidden">
         <div class="modal-content" style="max-height: 90vh;">
             <div class="modal-header-body">
@@ -1358,7 +1360,7 @@ async function procesarPagoMercadoPago() {
             alert("⚠️ No se pudo generar el link de pago: " + (datos.error || "Error desconocido"));
         }
     } catch (e) {
-        alert("⚠️ Error al conectar con la pasarela de pagos. Asegurate de estar ejecutando en Netlify Dev.");
+        alert("⚠️ Error al conectar con la pasarela de pagos.");
     }
 }
 
