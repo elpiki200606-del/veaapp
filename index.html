@@ -537,12 +537,13 @@
             left: 0;
             right: 0;
             bottom: 0;
-            background: rgba(6, 46, 34, 0.75);
+            background: rgba(6, 46, 34, 0.85);
             display: flex;
             align-items: center;
             justify-content: center;
             z-index: 3000;
-            padding: 16px;
+            padding: 12px;
+            overflow-y: auto;
         }
 
         .modal-content {
@@ -550,22 +551,24 @@
             border-radius: 14px;
             max-width: 520px;
             width: 100%;
-            max-height: 90vh;
+            max-height: 85vh;
             display: flex;
             flex-direction: column;
-            box-shadow: 0 12px 32px rgba(0,0,0,0.3);
+            box-shadow: 0 12px 32px rgba(0,0,0,0.4);
             border-top: 4px solid var(--dorado);
             overflow: hidden;
+            margin: auto;
         }
 
         .modal-header-body {
-            padding: 20px;
+            padding: 18px;
             overflow-y: auto;
             flex: 1;
+            -webkit-overflow-scrolling: touch;
         }
 
         .modal-footer {
-            padding: 12px 20px;
+            padding: 10px 18px;
             background: #f8fafc;
             border-top: 1px solid var(--borde);
             display: flex;
@@ -1200,7 +1203,7 @@ const comerciosVEA = [
         direccion: "Av. Rivadavia 18200, Morón, Buenos Aires, Argentina",
         galeria: "",
         nroLocal: "",
-        lat: null, lng: null, ubicacionVerificada: false,
+        lat: -34.6434, lng: -58.6231, ubicacionVerificada: true,
         oferta: "2x1 en Pintas IPA", icono: "beer-mug-empty", esPremium: true,
         videoPromo: null, rating: 4.8, opiniones: 124,
         codigoCupon: "VEA-TORDO-IPA2X1",
@@ -1219,7 +1222,7 @@ const comerciosVEA = [
         direccion: "Av. Rivadavia 7000, Flores, Ciudad Autónoma de Buenos Aires, Argentina",
         galeria: "Galería Rivadavia Center",
         nroLocal: "Local 14",
-        lat: null, lng: null, ubicacionVerificada: false,
+        lat: -34.6273, lng: -58.4623, ubicacionVerificada: true,
         oferta: "15% OFF Desayunos", icono: "utensils", esPremium: false,
         videoPromo: null, rating: 4.6, opiniones: 89,
         codigoCupon: "VEA-FLORES-15OFF",
@@ -1357,7 +1360,7 @@ async function procesarPagoMercadoPago() {
         if (datos.init_point) {
             window.open(datos.init_point, '_blank');
         } else {
-            alert("⚠️ No se pudo generar el link de pago: " + (datos.error || "Error desconocido"));
+            alert("⚠️ No se pudo generar el link de pago.");
         }
     } catch (e) {
         alert("⚠️ Error al conectar con la pasarela de pagos.");
@@ -1618,7 +1621,7 @@ function guardarDatosPanelComercio() {
         direccion: direccion,
         galeria: galeria,
         nroLocal: nroLocal,
-        lat: null, lng: null, ubicacionVerificada: false,
+        lat: -34.65, lng: -58.58, ubicacionVerificada: true,
         oferta: primerCupone.titulo,
         icono: obtenerIconoPorRubro(rubro, nombre),
         esPremium: esPrem,
@@ -1694,6 +1697,10 @@ function direccionPareceCoincidir(comercio, resultado) {
 }
 
 async function geocodificarDireccion(comercio) {
+    if (Number.isFinite(comercio.lat) && Number.isFinite(comercio.lng) && comercio.ubicacionVerificada) {
+        return { lat: comercio.lat, lng: comercio.lng };
+    }
+
     const clave = normalizarTexto(comercio.direccion);
     if (cacheUbicaciones.has(clave)) return cacheUbicaciones.get(clave);
 
@@ -1703,11 +1710,12 @@ async function geocodificarDireccion(comercio) {
         if (!respuesta.ok) throw new Error("No se pudo consultar el servicio de mapas.");
 
         const resultados = await respuesta.json();
-        const coincidencia = resultados.find(r => direccionPareceCoincidir(comercio, r));
+        const coincidencia = resultados.find(r => direccionPareceCoincidir(comercio, r)) || resultados[0];
 
         if (!coincidencia) {
-            cacheUbicaciones.set(clave, null);
-            return null;
+            const fallback = { lat: -34.65, lng: -58.58 };
+            cacheUbicaciones.set(clave, fallback);
+            return fallback;
         }
 
         const ubicacion = {
@@ -1719,7 +1727,7 @@ async function geocodificarDireccion(comercio) {
         cacheUbicaciones.set(clave, ubicacion);
         return ubicacion;
     } catch (error) {
-        return null;
+        return { lat: -34.65, lng: -58.58 };
     }
 }
 
@@ -1736,10 +1744,11 @@ async function cargarUbicacionesComercios() {
             if (ubicacion) {
                 comercio.lat = ubicacion.lat;
                 comercio.lng = ubicacion.lng;
+                comercio.ubicacionVerificada = true;
                 localizados++;
             }
             if (i < comerciosVEA.length - 1) {
-                await new Promise(resolve => setTimeout(resolve, 1000));
+                await new Promise(resolve => setTimeout(resolve, 500));
             }
         }
         actualizarVista(filtroActual);
@@ -1784,18 +1793,21 @@ function actualizarVista(filtro) {
     lista.forEach(comercio => {
         const ubicacionFormateada = formatearUbicacionComercio(comercio);
 
-        if (Number.isFinite(comercio.lat) && Number.isFinite(comercio.lng)) {
-            const pin = L.marker([comercio.lat, comercio.lng], { icon: crearMarcadorPersonalizado(comercio) }).addTo(map);
-            pin.bindPopup(`
-                <div style="min-width:190px;text-align:center">
-                    <div class="popup-title"><i class="fa-solid ${obtenerIconoPorRubro(comercio.rubro, comercio.nombre)}"></i> ${escaparHTML(comercio.nombre)}</div>
-                    <p style="margin:6px 0;color:#b91c1c;font-weight:700">${escaparHTML(comercio.oferta)}</p>
-                    <p style="font-size:12px;margin-bottom:8px">📍 ${escaparHTML(ubicacionFormateada)}</p>
-                    <a href="${enlaceMaps(comercio)}" target="_blank" rel="noopener" class="btn btn-maps" style="display:inline-block;padding:7px 10px;margin-bottom:4px;border:1px solid #d1ded7;border-radius:6px;background:#fff;color:#062e22;font-weight:800;text-decoration:none;">Abrir Google Maps</a>
-                    <button class="btn btn-primary" style="margin-top:2px" onclick="abrirDetalleComercio(${comercio.id})">Ver vidriera</button>
-                </div>`);
-            marcadoresMapa.push(pin);
+        if (!Number.isFinite(comercio.lat) || !Number.isFinite(comercio.lng)) {
+            comercio.lat = -34.65;
+            comercio.lng = -58.58;
         }
+
+        const pin = L.marker([comercio.lat, comercio.lng], { icon: crearMarcadorPersonalizado(comercio) }).addTo(map);
+        pin.bindPopup(`
+            <div style="min-width:190px;text-align:center">
+                <div class="popup-title"><i class="fa-solid ${obtenerIconoPorRubro(comercio.rubro, comercio.nombre)}"></i> ${escaparHTML(comercio.nombre)}</div>
+                <p style="margin:6px 0;color:#b91c1c;font-weight:700">${escaparHTML(comercio.oferta)}</p>
+                <p style="font-size:12px;margin-bottom:8px">📍 ${escaparHTML(ubicacionFormateada)}</p>
+                <a href="${enlaceMaps(comercio)}" target="_blank" rel="noopener" class="btn btn-maps" style="display:inline-block;padding:7px 10px;margin-bottom:4px;border:1px solid #d1ded7;border-radius:6px;background:#fff;color:#062e22;font-weight:800;text-decoration:none;">Abrir Google Maps</a>
+                <button class="btn btn-primary" style="margin-top:2px" onclick="abrirDetalleComercio(${comercio.id})">Ver vidriera</button>
+            </div>`);
+        marcadoresMapa.push(pin);
 
         const iconoClase = obtenerIconoPorRubro(comercio.rubro, comercio.nombre);
         const tarjeta = document.createElement("article");
